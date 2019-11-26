@@ -1,0 +1,52 @@
+input {
+     file {
+        path => "/root/logs4/*"
+        sincedb_path => "/root/logs4/.badgerhole.sincedb"
+        start_position => "beginning"
+     }
+}
+
+filter {
+    json {
+        source => "message"
+    }
+    date {
+        match => [ "timestamp","yyyy-MM-dd HH;mm;ss.SSS Z", "ISO8601" ]
+    }
+    geoip {
+       source => "source_ip"
+       target => "source_geo"
+    }
+    if [source_geo][latitude] {
+       mutate {
+           add_field => {
+              "[source_geopoint]" => "%{[source_geo][latitude]},%{[source_geo][longitude]}"
+           }
+       }
+    }
+    geoip {
+       source => "dist_ip"
+       target => "dest_geo"
+    }
+    if [dest_geo][latitude] {
+       mutate {
+           add_field => {
+              "[dest_geopoint]" => "%{[dest_geo][latitude]},%{[dest_geo][longitude]}"
+           }
+       }
+    }
+}
+filter {
+    mutate {
+     remove_field => "message"
+   }
+}
+output {
+     elasticsearch {
+         hosts => ["https://0249c47a96eb43bb9b3a1bf0f9106a39.eastus2.azure.elastic-cloud.com:9243"]
+         user => "elastic"
+         password => "AmmgHHow9pfHL4HlpBqrgTGb"
+         index => "badgerhole-%{+YYYY}"
+     }
+#      stdout {}
+}
